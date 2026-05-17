@@ -1,3 +1,4 @@
+#include "GameOfLife/core/Camera.hpp"
 #include <GameOfLife/core/Grid.hpp>
 #include <GameOfLife/core/Utils.hpp>
 #include <SDL3/SDL_pixels.h>
@@ -42,22 +43,25 @@ void Grid::updateAlpha(float deltatime) {
   }
 }
 
-void Grid::render(SDL_Renderer *renderer) const {
+void Grid::render(SDL_Renderer *renderer, Camera &camera) const {
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
   for (int x = 0; x < m_width; x++) {
     for (int y = 0; y < m_height; y++) {
       bool state = getCell(x, y);
-      SDL_FRect gridCell = {(float)x * m_cellSize, (float)y * m_cellSize,
-                            (float)m_cellSize, (float)m_cellSize};
+      float cellSizeZoomed = m_cellSize * camera.zoom;
+      float screenX = x * cellSizeZoomed - camera.x;
+      float screenY = y * cellSizeZoomed - camera.y;
+
+      SDL_FRect gridCell = {screenX, screenY, cellSizeZoomed, cellSizeZoomed};
 
       SDL_SetRenderDrawColor(renderer, 20, 40, 70, 255);
       SDL_RenderRect(renderer, &gridCell);
 
-      float padding = 2.0f;
-      SDL_FRect cell = {
-          (float)x * m_cellSize + padding, (float)y * m_cellSize + padding,
-          (float)m_cellSize - padding * 2, (float)m_cellSize - padding * 2};
+      float padding = 2.0f * camera.zoom;
+      SDL_FRect cell = {screenX + padding, screenY + padding,
+                        cellSizeZoomed - padding * 2,
+                        cellSizeZoomed - padding * 2};
 
       SDL_SetRenderDrawColor(renderer, 79, 195, 247,
                              (Uint8)(getAlpha(x, y) * 255));
@@ -115,6 +119,8 @@ float Grid::getAlpha(int x, int y) const { return m_alpha[index(x, y)]; }
 
 int Grid::index(int x, int y) const { return x + y * m_width; }
 int Grid::wrap(int val, int max) const { return ((val % max) + max) % max; }
+int Grid::getWidth() const { return m_width; }
+int Grid::getHeight() const { return m_height; }
 int Grid::getCellSize() const { return m_cellSize; }
 
 } // namespace J0o0ll::GOL

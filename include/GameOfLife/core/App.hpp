@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GameOfLife/core/Camera.hpp"
 #include <GameOfLife/core/Grid.hpp>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_oldnames.h>
@@ -23,11 +24,12 @@ private:
 
   Uint64 m_last;
 
-  int m_width, m_height;
-  float m_deltatime, m_accumulator, m_interval;
-  bool m_running, m_paused;
+  int m_width, m_height, m_generationCount;
+  float m_deltatime, m_accumulator, m_interval, m_panStartX, m_panStartY;
+  bool m_running, m_paused, m_panning;
 
   Grid m_grid;
+  Camera m_camera;
 
   void update();
   void render();

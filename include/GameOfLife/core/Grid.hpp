@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GameOfLife/core/Camera.hpp"
 #include <SDL3/SDL_render.h>
 #include <vector>
 
@@ -12,9 +13,12 @@ public:
   bool getCell(int x, int y) const;
   int getCellSize() const;
 
+  int getWidth() const;
+  int getHeight() const;
+
   void update(float deltatime);
   void updateAlpha(float deltatime);
-  void render(SDL_Renderer *renderer) const;
+  void render(SDL_Renderer *renderer, Camera &camera) const;
   void resize(int newWidth, int newHeight, int newCellSize);
   void randomize();
 

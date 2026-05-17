@@ -18,7 +18,7 @@
 namespace J0o0ll::GOL {
 App::App(const char *title, int width, int height)
     : m_width(width), m_height(height), m_running(true),
-      m_grid(m_width / 10, m_height / 10, 10) {
+      m_grid(m_width / 10, m_height / 10, 10), m_camera({0, 0, 1.0f}) {
   SDL_Init(SDL_INIT_VIDEO);
   TTF_Init();
 
@@ -30,6 +30,8 @@ App::App(const char *title, int width, int height)
 
   m_accumulator = 0.0f;
   m_interval = 0.1f;
+  m_generationCount = 0;
+  m_panning = false;
   m_paused = false;
 }
 
@@ -74,20 +76,29 @@ void App::update() {
   m_accumulator += m_deltatime;
 
   if (m_accumulator >= m_interval) {
+    m_generationCount++;
     m_grid.update(m_deltatime);
     m_accumulator = 0.0f;
   }
 }
 
 void App::render() {
-  m_grid.render(m_renderer);
+  m_grid.render(m_renderer, m_camera);
 
   SDL_Color textColor = {100, 220, 255, 255};
 
   std::string speedText = "speed: " + Utils::FloatToString(m_interval, 2);
   HUD::renderText(m_renderer, m_font, speedText,
                   m_width - HUD::getTextSize(m_font, speedText).first - 10,
-                  m_height - HUD::getTextSize(m_font, speedText).second - 30,
+                  m_height - HUD::getTextSize(m_font, speedText).second - 50,
+                  textColor);
+
+  std::string generationText =
+      "generation: " + Utils::IntToString(m_generationCount);
+  HUD::renderText(m_renderer, m_font, generationText,
+                  m_width - HUD::getTextSize(m_font, generationText).first - 10,
+                  m_height - HUD::getTextSize(m_font, generationText).second -
+                      30,
                   textColor);
 
   std::string pausedText = m_paused ? "paused" : "running";
@@ -99,8 +110,8 @@ void App::render() {
   float mouseX, mouseY;
   SDL_GetMouseState(&mouseX, &mouseY);
 
-  int cellX = (int)mouseX / m_grid.getCellSize();
-  int cellY = (int)mouseY / m_grid.getCellSize();
+  int cellX = (mouseX + m_camera.x) / (m_grid.getCellSize() * m_camera.zoom);
+  int cellY = (mouseY + m_camera.y) / (m_grid.getCellSize() * m_camera.zoom);
   std::string mousePosXText = "x: " + Utils::IntToString(cellX);
   HUD::renderText(m_renderer, m_font, mousePosXText, 10,
                   m_height - HUD::getTextSize(m_font, mousePosXText).second -
@@ -131,27 +142,68 @@ void App::handleEvents(const SDL_Event &event) {
       m_paused = !m_paused;
     } else if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
       m_running = false;
-    } else if (event.key.scancode == SDL_SCANCODE_R) {
+    } else if (event.key.scancode == SDL_SCANCODE_R && !m_paused) {
       m_grid.randomize();
+      m_generationCount = 0;
     }
 
     break;
+  case SDL_EVENT_MOUSE_BUTTON_UP: {
+    if (event.button.button == SDL_BUTTON_RIGHT)
+      m_panning = false;
+    break;
+  }
   case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-    int currentCellSize = m_grid.getCellSize();
-    bool cell = m_grid.getCell(event.button.x / currentCellSize,
-                               event.button.y / currentCellSize);
-    m_grid.setCell(event.button.x / currentCellSize,
-                   event.button.y / currentCellSize, !cell);
+    if (event.button.button == SDL_BUTTON_LEFT) {
+      int cellX = (event.button.x + m_camera.x) /
+                  (m_grid.getCellSize() * m_camera.zoom);
+      int cellY = (event.button.y + m_camera.y) /
+                  (m_grid.getCellSize() * m_camera.zoom);
+      bool cell = m_grid.getCell(cellX, cellY);
+      m_grid.setCell(cellX, cellY, !cell);
+    } else if (event.button.button == SDL_BUTTON_RIGHT) {
+      m_panning = true;
+    }
 
     break;
   }
-  case SDL_EVENT_MOUSE_WHEEL: {
-    int lastCellSize = m_grid.getCellSize();
-    int newCellSize =
-        std::clamp(lastCellSize + (int)event.wheel.y * 10, 10, 64);
+  case SDL_EVENT_MOUSE_MOTION: {
+    if (m_panning) {
+      m_camera.x -= event.motion.xrel;
+      m_camera.y -= event.motion.yrel;
 
-    if (lastCellSize != newCellSize)
-      m_grid.resize(m_width / newCellSize, m_height / newCellSize, newCellSize);
+      m_camera.x =
+          std::clamp(m_camera.x, 0.0f,
+                     std::max(0.0f, m_grid.getWidth() * m_grid.getCellSize() *
+                                            m_camera.zoom -
+                                        m_width));
+      m_camera.y =
+          std::clamp(m_camera.y, 0.0f,
+                     std::max(0.0f, m_grid.getHeight() * m_grid.getCellSize() *
+                                            m_camera.zoom -
+                                        m_height));
+    }
+    break;
+  }
+  case SDL_EVENT_MOUSE_WHEEL: {
+    float oldZoom = m_camera.zoom;
+    m_camera.zoom = std::clamp(oldZoom + event.wheel.y * 0.1f, 1.0f, 5.0f);
+
+    float centerX = m_width / 2.0f;
+    float centerY = m_height / 2.0f;
+    m_camera.x = (m_camera.x + centerX) * (m_camera.zoom / oldZoom) - centerX;
+    m_camera.y = (m_camera.y + centerY) * (m_camera.zoom / oldZoom) - centerY;
+
+    m_camera.x =
+        std::clamp(m_camera.x, 0.0f,
+                   std::max(0.0f, m_grid.getWidth() * m_grid.getCellSize() *
+                                          m_camera.zoom -
+                                      m_width));
+    m_camera.y =
+        std::clamp(m_camera.y, 0.0f,
+                   std::max(0.0f, m_grid.getHeight() * m_grid.getCellSize() *
+                                          m_camera.zoom -
+                                      m_height));
 
     break;
   }
