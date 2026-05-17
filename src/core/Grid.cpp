@@ -1,4 +1,6 @@
 #include <GameOfLife/core/Grid.hpp>
+#include <GameOfLife/core/Utils.hpp>
+#include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_stdinc.h>
@@ -46,10 +48,18 @@ void Grid::render(SDL_Renderer *renderer) const {
   for (int x = 0; x < m_width; x++) {
     for (int y = 0; y < m_height; y++) {
       bool state = getCell(x, y);
-      SDL_FRect cell = {(float)x * m_cellSize, (float)y * m_cellSize,
-                        (float)m_cellSize, (float)m_cellSize};
+      SDL_FRect gridCell = {(float)x * m_cellSize, (float)y * m_cellSize,
+                            (float)m_cellSize, (float)m_cellSize};
 
-      SDL_SetRenderDrawColor(renderer, 255, 255, 255,
+      SDL_SetRenderDrawColor(renderer, 20, 40, 70, 255);
+      SDL_RenderRect(renderer, &gridCell);
+
+      float padding = 2.0f;
+      SDL_FRect cell = {
+          (float)x * m_cellSize + padding, (float)y * m_cellSize + padding,
+          (float)m_cellSize - padding * 2, (float)m_cellSize - padding * 2};
+
+      SDL_SetRenderDrawColor(renderer, 79, 195, 247,
                              (Uint8)(getAlpha(x, y) * 255));
       SDL_RenderFillRect(renderer, &cell);
     }

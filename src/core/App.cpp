@@ -13,8 +13,6 @@
 #include <SDL3/SDL_video.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <algorithm>
-#include <iomanip>
-#include <ios>
 #include <string>
 
 namespace J0o0ll::GOL {
@@ -54,7 +52,7 @@ void App::run() {
 
     update();
 
-    SDL_SetRenderDrawColor(m_renderer, 15, 15, 20, 255);
+    SDL_SetRenderDrawColor(m_renderer, 10, 22, 40, 255);
     SDL_RenderClear(m_renderer);
 
     render();
@@ -84,7 +82,7 @@ void App::update() {
 void App::render() {
   m_grid.render(m_renderer);
 
-  SDL_Color textColor = {100, 255, 100, 255};
+  SDL_Color textColor = {100, 220, 255, 255};
 
   std::string speedText = "speed: " + Utils::FloatToString(m_interval, 2);
   HUD::renderText(m_renderer, m_font, speedText,
@@ -149,7 +147,8 @@ void App::handleEvents(const SDL_Event &event) {
   }
   case SDL_EVENT_MOUSE_WHEEL: {
     int lastCellSize = m_grid.getCellSize();
-    int newCellSize = std::clamp(lastCellSize + (int)event.wheel.y * 10, 4, 64);
+    int newCellSize =
+        std::clamp(lastCellSize + (int)event.wheel.y * 10, 10, 64);
 
     if (lastCellSize != newCellSize)
       m_grid.resize(m_width / newCellSize, m_height / newCellSize, newCellSize);

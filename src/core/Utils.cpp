@@ -1,4 +1,5 @@
 #include <GameOfLife/core/Utils.hpp>
+#include <SDL3/SDL_render.h>
 #include <iomanip>
 #include <ios>
 #include <string>

@@ -19,6 +19,8 @@ public:
   void randomize();
 
 private:
+  SDL_Texture *m_cellTexture;
+
   int m_width, m_height, m_cellSize;
 
   std::vector<bool> m_cells, m_next;

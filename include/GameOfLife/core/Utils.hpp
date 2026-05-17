@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL3/SDL_render.h>
 #include <string>
 
 namespace J0o0ll::GOL::Utils {
