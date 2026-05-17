@@ -1,6 +1,8 @@
 #include <GameOfLife/core/Grid.hpp>
 #include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_render.h>
+#include <SDL3/SDL_stdinc.h>
+#include <algorithm>
 #include <random>
 #include <utility>
 
@@ -9,9 +11,10 @@ Grid::Grid(int width, int height, int cellSize)
     : m_width(width), m_height(height), m_cellSize(cellSize) {
   m_cells.resize(m_width * m_height);
   m_next.resize(m_width * m_height);
+  m_alpha.resize(m_width * m_height);
 }
 
-void Grid::update() {
+void Grid::update(float deltatime) {
   for (int x = 0; x < m_width; x++) {
     for (int y = 0; y < m_height; y++) {
       int neighbors = countNeighbors(x, y);
@@ -24,17 +27,30 @@ void Grid::update() {
   std::swap(m_next, m_cells);
 }
 
+void Grid::updateAlpha(float deltatime) {
+  float alphaSpeed = 5.0f * deltatime;
+
+  for (int x = 0; x < m_width; x++) {
+    for (int y = 0; y < m_height; y++) {
+      float alpha = m_alpha[index(x, y)];
+      alpha += m_next[index(x, y)] ? alphaSpeed : -alphaSpeed;
+      alpha = std::clamp(alpha, 0.0f, 1.0f);
+      m_alpha[index(x, y)] = alpha;
+    }
+  }
+}
+
 void Grid::render(SDL_Renderer *renderer) const {
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
   for (int x = 0; x < m_width; x++) {
     for (int y = 0; y < m_height; y++) {
       bool state = getCell(x, y);
-      if (!state)
-        continue;
-
       SDL_FRect cell = {(float)x * m_cellSize, (float)y * m_cellSize,
                         (float)m_cellSize, (float)m_cellSize};
 
-      SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+      SDL_SetRenderDrawColor(renderer, 255, 255, 255,
+                             (Uint8)(getAlpha(x, y) * 255));
       SDL_RenderFillRect(renderer, &cell);
     }
   }
@@ -47,6 +63,8 @@ void Grid::resize(int newWidth, int newHeight, int newCellSize) {
 
   m_cells.resize(m_width * m_height);
   m_next.resize(m_width * m_height);
+  m_alpha.resize(m_width * m_height);
+
   randomize();
 }
 
@@ -82,6 +100,8 @@ int Grid::countNeighbors(int x, int y) const {
 
   return counter;
 }
+
+float Grid::getAlpha(int x, int y) const { return m_alpha[index(x, y)]; }
 
 int Grid::index(int x, int y) const { return x + y * m_width; }
 int Grid::wrap(int val, int max) const { return ((val % max) + max) % max; }

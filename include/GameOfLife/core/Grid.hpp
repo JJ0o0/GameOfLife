@@ -12,7 +12,8 @@ public:
   bool getCell(int x, int y) const;
   int getCellSize() const;
 
-  void update();
+  void update(float deltatime);
+  void updateAlpha(float deltatime);
   void render(SDL_Renderer *renderer) const;
   void resize(int newWidth, int newHeight, int newCellSize);
   void randomize();
@@ -21,6 +22,9 @@ private:
   int m_width, m_height, m_cellSize;
 
   std::vector<bool> m_cells, m_next;
+  std::vector<float> m_alpha;
+
+  float getAlpha(int x, int y) const;
 
   int index(int x, int y) const;
   int wrap(int val, int max) const;

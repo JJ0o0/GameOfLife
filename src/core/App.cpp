@@ -1,21 +1,32 @@
+#include "GameOfLife/core/Utils.hpp"
 #include <GameOfLife/core/App.hpp>
+#include <GameOfLife/core/HUD.hpp>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_surface.h>
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <algorithm>
+#include <iomanip>
+#include <ios>
+#include <string>
 
 namespace J0o0ll::GOL {
 App::App(const char *title, int width, int height)
     : m_width(width), m_height(height), m_running(true),
       m_grid(m_width / 10, m_height / 10, 10) {
   SDL_Init(SDL_INIT_VIDEO);
+  TTF_Init();
 
   m_window = SDL_CreateWindow(title, width, height, 0);
   m_renderer = SDL_CreateRenderer(m_window, NULL);
+  m_font = TTF_OpenFont("assets/fonts/FiraCode-Bold.ttf", 16);
 
   m_grid.randomize();
 
@@ -27,6 +38,8 @@ App::App(const char *title, int width, int height)
 App::~App() {
   SDL_DestroyRenderer(m_renderer);
   SDL_DestroyWindow(m_window);
+  TTF_CloseFont(m_font);
+  TTF_Quit();
   SDL_Quit();
 }
 
@@ -55,18 +68,60 @@ void App::update() {
   m_deltatime = (now - m_last) / 1000.0f;
   m_last = now;
 
+  m_grid.updateAlpha(m_deltatime);
+
   if (m_paused)
     return;
 
   m_accumulator += m_deltatime;
 
   if (m_accumulator >= m_interval) {
-    m_grid.update();
+    m_grid.update(m_deltatime);
     m_accumulator = 0.0f;
   }
 }
 
-void App::render() { m_grid.render(m_renderer); }
+void App::render() {
+  m_grid.render(m_renderer);
+
+  SDL_Color textColor = {100, 255, 100, 255};
+
+  std::string speedText = "speed: " + Utils::FloatToString(m_interval, 2);
+  HUD::renderText(m_renderer, m_font, speedText,
+                  m_width - HUD::getTextSize(m_font, speedText).first - 10,
+                  m_height - HUD::getTextSize(m_font, speedText).second - 30,
+                  textColor);
+
+  std::string pausedText = m_paused ? "paused" : "running";
+  HUD::renderText(m_renderer, m_font, pausedText,
+                  m_width - HUD::getTextSize(m_font, pausedText).first - 10,
+                  m_height - HUD::getTextSize(m_font, pausedText).second - 10,
+                  textColor);
+
+  float mouseX, mouseY;
+  SDL_GetMouseState(&mouseX, &mouseY);
+
+  int cellX = (int)mouseX / m_grid.getCellSize();
+  int cellY = (int)mouseY / m_grid.getCellSize();
+  std::string mousePosXText = "x: " + Utils::IntToString(cellX);
+  HUD::renderText(m_renderer, m_font, mousePosXText, 10,
+                  m_height - HUD::getTextSize(m_font, mousePosXText).second -
+                      50,
+                  textColor);
+
+  std::string mousePosYText = "y: " + Utils::IntToString(cellY);
+  HUD::renderText(m_renderer, m_font, mousePosYText, 10,
+                  m_height - HUD::getTextSize(m_font, mousePosYText).second -
+                      30,
+                  textColor);
+
+  bool state = m_grid.getCell(cellX, cellY);
+  std::string cellStateText = "state: " + std::string(state ? "alive" : "dead");
+  HUD::renderText(m_renderer, m_font, cellStateText, 10,
+                  m_height - HUD::getTextSize(m_font, cellStateText).second -
+                      10,
+                  textColor);
+}
 
 void App::handleEvents(const SDL_Event &event) {
   switch (event.type) {

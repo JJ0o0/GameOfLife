@@ -2,9 +2,11 @@
 
 #include <GameOfLife/core/Grid.hpp>
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_video.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 namespace J0o0ll::GOL {
 class App {
@@ -17,6 +19,7 @@ public:
 private:
   SDL_Window *m_window;
   SDL_Renderer *m_renderer;
+  TTF_Font *m_font;
 
   Uint64 m_last;
 
